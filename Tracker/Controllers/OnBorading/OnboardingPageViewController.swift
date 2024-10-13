@@ -32,7 +32,7 @@ final class OnboardingPageViewController: UIViewController {
         view.backgroundColor = .white
 
         let imageView = UIImageView(image: UIImage(named: imageName))
-        imageView.contentMode = .scaleAspectFit
+        imageView.contentMode = .scaleAspectFill
         imageView.translatesAutoresizingMaskIntoConstraints = false
 
         let label = UILabel()

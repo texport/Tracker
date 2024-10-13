@@ -87,7 +87,7 @@ final class OnboardingViewController: UIPageViewController, UIPageViewController
     // MARK: - Skip Button Action
 
     @objc private func skipOnboarding() {
-        let mainVC = TrackersViewController()
+        let mainVC = MainTabBarController()
         let navigationController = UINavigationController(rootViewController: mainVC)
         navigationController.modalPresentationStyle = .fullScreen
         present(navigationController, animated: true, completion: nil)
