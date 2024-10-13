@@ -33,7 +33,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let rootViewController: UIViewController
         if onboardingCompleted {
             // Переход на главный экран, если онбординг завершен
-            rootViewController = UINavigationController(rootViewController: TrackersViewController())
+            rootViewController = MainTabBarController()
         } else {
             // Показ онбординга
             let onboardingVC = OnboardingViewController(transitionStyle: .scroll, navigationOrientation: .horizontal)
