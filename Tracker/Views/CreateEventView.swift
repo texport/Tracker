@@ -79,13 +79,6 @@ final class CreateEventView: UIView {
         return view
     }()
 
-//    private lazy var separatorLine: UIView = {
-//        let view = UIView()
-//        view.backgroundColor = .lightGray
-//        view.translatesAutoresizingMaskIntoConstraints = false
-//        return view
-//    }()
-
     lazy var categoryView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -469,7 +462,7 @@ extension CreateEventView: UICollectionViewDataSource, UICollectionViewDelegateF
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: 52, height: 52) // Фиксированный размер ячеек
+        CGSize(width: 52, height: 52) // Фиксированный размер ячеек
     }
 
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {

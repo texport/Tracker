@@ -23,9 +23,14 @@ final class TrackerStore: NSObject, NSFetchedResultsControllerDelegate {
         trackerEntity.emoji = emoji
         trackerEntity.schedule = schedule as NSObject
 
-        if let categoryEntity = fetchCategoryEntity(for: category) {
-            trackerEntity.category = categoryEntity
+        // Используем fetchCategoryEntity для привязки категории
+        guard let categoryEntity = fetchCategoryEntity(for: category) else {
+            print("Ошибка: Категория \(category.title) не найдена.")
+            return nil
         }
+        
+        trackerEntity.category = categoryEntity  // Устанавливаем связь
+        categoryEntity.addToTrackers(trackerEntity) // Добавляем трекер в категорию
 
         do {
             try context.save()
@@ -35,38 +40,31 @@ final class TrackerStore: NSObject, NSFetchedResultsControllerDelegate {
             return nil
         }
     }
-
-    // Выполнение fetch для обновления данных
-    func performFetch() {
-        do {
-            try fetchedResultsController?.performFetch()
-        } catch {
-            print("Ошибка при выполнении fetch: \(error)")
-        }
-    }
     
     // Метод делегата для уведомления об изменениях в данных
     func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
-        onTrackersChanged?()  // Вызываем замыкание, когда данные изменяются
+        onTrackersChanged?()
     }
     
-    // Получение всех трекеров в модели структуры Tracker
-//    func fetchAllTrackers() -> [Tracker] {
-//        let fetchRequest: NSFetchRequest<TrackerEntity> = TrackerEntity.fetchRequest()
-//        do {
-//            let trackerEntities = try context.fetch(fetchRequest)
-//            return trackerEntities.compactMap { tracker(from: $0) }
-//        } catch {
-//            print("Ошибка при загрузке трекеров: \(error)")
-//            return []
-//        }
-//    }
     func fetchAllTrackers() -> [Tracker] {
         guard let trackerEntities = fetchedResultsController?.fetchedObjects else { return [] }
         return trackerEntities.compactMap { tracker(from: $0) }
     }
 
-    // Настройка FetchedResultsController
+    func fetchCategoryForTracker(trackerID: UUID) -> TrackerCategoryEntity? {
+        let fetchRequest: NSFetchRequest<TrackerEntity> = TrackerEntity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "id == %@", trackerID as CVarArg)
+        
+        do {
+            if let trackerEntity = try context.fetch(fetchRequest).first {
+                return trackerEntity.category
+            }
+        } catch {
+            print("Ошибка при загрузке категории трекера: \(error)")
+        }
+        return nil
+    }
+
     private func setupFetchedResultsController() {
         let fetchRequest: NSFetchRequest<TrackerEntity> = TrackerEntity.fetchRequest()
         fetchRequest.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
@@ -78,10 +76,8 @@ final class TrackerStore: NSObject, NSFetchedResultsControllerDelegate {
             cacheName: nil
         )
 
-        // Назначаем делегат
         fetchedResultsController?.delegate = self
 
-        // Выполняем начальное получение данных
         do {
             try fetchedResultsController?.performFetch()
         } catch {
@@ -107,7 +103,7 @@ extension TrackerStore {
     private func tracker(from entity: TrackerEntity) -> Tracker? {
         guard let id = entity.id,
               let name = entity.name,
-              let colorData = entity.color,
+              //let colorData = entity.color,
               let color = entity.color as? UIColor,
               let emoji = entity.emoji,
               let schedule = entity.schedule as? [String] else {
