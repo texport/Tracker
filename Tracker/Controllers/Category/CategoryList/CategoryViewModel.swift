@@ -4,9 +4,10 @@
 //
 //  Created by Sergey Ivanov on 11.10.2024.
 //
+
 import UIKit
 
-class CategoryViewModel {
+final class CategoryViewModel {
     
     private(set) var categories: [TrackerCategory] = [] {
         didSet {

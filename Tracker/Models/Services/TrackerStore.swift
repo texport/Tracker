@@ -15,26 +15,6 @@ final class TrackerStore: NSObject, NSFetchedResultsControllerDelegate {
     }
 
     // Добавление нового трекера
-//    func addTracker(name: String, color: UIColor, emoji: String, schedule: [String], category: TrackerCategory) -> Tracker? {
-//        let trackerEntity = TrackerEntity(context: context)
-//        trackerEntity.id = UUID()
-//        trackerEntity.name = name
-//        trackerEntity.color = color
-//        trackerEntity.emoji = emoji
-//        trackerEntity.schedule = schedule as NSObject
-//
-//        if let categoryEntity = fetchCategoryEntity(for: category) {
-//            trackerEntity.category = categoryEntity
-//        }
-//
-//        do {
-//            try context.save()
-//            return Tracker(id: trackerEntity.id!, name: name, color: color, emoji: emoji, schedule: schedule)
-//        } catch {
-//            print("Ошибка при сохранении трекера: \(error)")
-//            return nil
-//        }
-//    }
     func addTracker(name: String, color: UIColor, emoji: String, schedule: [String], category: TrackerCategory) -> Tracker? {
         let trackerEntity = TrackerEntity(context: context)
         trackerEntity.id = UUID()
@@ -60,15 +40,6 @@ final class TrackerStore: NSObject, NSFetchedResultsControllerDelegate {
             return nil
         }
     }
-
-//    // Выполнение fetch для обновления данных
-//    func performFetch() {
-//        do {
-//            try fetchedResultsController?.performFetch()
-//        } catch {
-//            print("Ошибка при выполнении fetch: \(error)")
-//        }
-//    }
     
     // Метод делегата для уведомления об изменениях в данных
     func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {

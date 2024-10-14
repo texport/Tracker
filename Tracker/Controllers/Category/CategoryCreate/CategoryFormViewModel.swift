@@ -7,7 +7,7 @@
 
 import Foundation
 
-class CategoryFormViewModel {
+final class CategoryFormViewModel {
 
     var categoryTitle: String = "" {
         didSet {

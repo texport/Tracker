@@ -169,25 +169,6 @@ final class CreateHabitViewController: UIViewController, UITextViewDelegate, Sch
         present(navController, animated: true, completion: nil)
     }
 
-//    @objc private func categoryTapped() {
-//        if selectedCategory == "Новое" {
-//            // Если категория уже выбрана, снимаем выбор
-//            selectedCategory = nil
-//            createHabitView.updateSelectedCategoryLabel(with: "")
-//        } else {
-//            // Если категория не выбрана, выбираем ее
-//            selectedCategory = "Новое"
-//            //createHabitView.updateSelectedCategoryLabel(with: selectedCategory!)
-//            if let selectedCategory = selectedCategory {
-//                createHabitView.updateSelectedCategoryLabel(with: selectedCategory)
-//            } else {
-//                createHabitView.updateSelectedCategoryLabel(with: "")
-//            }
-//
-//        }
-//        updateCreateButtonState()
-//    }
-
     @objc private func categoryTapped() {
         let categoryStore = categoryStore
         let categoryViewModel = CategoryViewModel(categoryStore: categoryStore)
