@@ -95,9 +95,16 @@ final class TrackerService: NSObject {
         print("Записаны данные для трекера \(tracker.name): \(savedRecords)")
     }
 
-    // Логика поиска по имени
-    func searchTrackers(with keyword: String) -> [Tracker] {
-        return trackerStore.fetchAllTrackers().filter { $0.name.lowercased().contains(keyword.lowercased()) }
+    // Удаление трекера
+    func deleteTracker(_ id: UUID, completion: @escaping (Bool) -> Void) {
+        trackerStore.deleteTracker(with: id) { success in
+            if success {
+                print("Трекер успешно удален")
+            } else {
+                print("Не удалось удалить трекер")
+            }
+            completion(success)
+        }
     }
     
     // Вспомогательный метод для получения дня недели из даты
@@ -110,5 +117,33 @@ final class TrackerService: NSObject {
     
     func countCompleted(for tracker: Tracker) -> Int {
         return recordStore.fetchAllRecords().filter { $0.trackerID == tracker.id }.count
+    }
+    
+    // Метод для закрепления/открепления трекера
+    func togglePin(for trackerID: UUID, completion: @escaping (Bool) -> Void) {
+        trackerStore.togglePinStatus(for: trackerID) { success in
+            completion(success)
+        }
+    }
+    
+    // Поиск трекеров по имени
+    func searchTrackers(by name: String) -> [TrackerCategory] {
+        // Получаем все трекеры из хранилища
+        let allTrackers = trackerStore.fetchAllTrackers()
+
+        // Фильтруем трекеры по имени
+        let filteredTrackers = allTrackers.filter {
+            $0.name.lowercased().contains(name.lowercased())
+        }
+
+        // Группируем трекеры по категориям, используя ID трекера
+        let groupedTrackers = Dictionary(grouping: filteredTrackers) { tracker in
+            trackerStore.fetchCategoryForTracker(trackerID: tracker.id)?.title ?? "Без категории"
+        }
+
+        // Преобразуем в массив TrackerCategory
+        return groupedTrackers.map { (categoryTitle, trackers) in
+            TrackerCategory(title: categoryTitle, trackers: trackers)
+        }
     }
 }

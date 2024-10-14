@@ -8,14 +8,12 @@ final class TrackersViewController: UIViewController {
     private var trackerService: TrackerService?
     
     init() {
-        super.init(nibName: nil, bundle: nil) // Вызов инициализатора родительского класса
+        super.init(nibName: nil, bundle: nil)
         
-        // Получаем ссылку на AppDelegate и извлекаем trackerService
         if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
             self.trackerService = appDelegate.trackerService
         }
         
-        // Настраиваем замыкание на обновление данных
         self.trackerService?.onTrackersUpdated = { [weak self] in
             guard let self = self else { return }
             self.loadTrackers(for: self.datePicker.date)  // Обновляем трекеры, когда они изменяются
@@ -105,6 +103,7 @@ final class TrackersViewController: UIViewController {
         setupConstraints()
         setupCollectionView()
         setupActivityIndicator()
+        setupDismissKeyboardGesture()
         loadTrackers(for: Date())
     }
 
@@ -201,6 +200,7 @@ final class TrackersViewController: UIViewController {
     private func setupActions() {
         datePicker.addTarget(self, action: #selector(datePickerValueChanged(_:)), for: .valueChanged)
         searchBar.delegate = self
+        searchBar.showsCancelButton = false
     }
 
     private func setupCollectionView() {
@@ -227,23 +227,50 @@ final class TrackersViewController: UIViewController {
     private func loadTrackers(for date: Date) {
         activityIndicator.startAnimating()
         DispatchQueue.global().async { [weak self] in
-            guard let self else { return }
-            
-            // Получаем обновленные трекеры для конкретной даты
+            guard let self = self else { return }
+
+            // Загружаем трекеры и категории
             guard let (trackerCategories, completedTrackers, completedCount) = self.trackerService?.fetchTrackers(for: date) else {
                 DispatchQueue.main.async {
-                    self.activityIndicator.stopAnimating() // Останавливаем индикатор, если данные не были загружены
-                }
-                print("Загруженные категории:")
-                for category in trackerCategories.0 {
-                    print("Категория: \(category.title), Трекеры: \(category.trackers.count)")
+                    self.activityIndicator.stopAnimating()
                 }
                 return
             }
-            
+
+            var pinnedTrackers: [Tracker] = []
+            var regularCategories: [TrackerCategory] = []
+
+            // Разделение трекеров на закрепленные и обычные
+            for category in trackerCategories {
+                var unpinned = [Tracker]()
+                for tracker in category.trackers {
+                    if tracker.isPinned {
+                        pinnedTrackers.append(tracker) // Собираем все закрепленные
+                    } else {
+                        unpinned.append(tracker) // Оставляем обычные
+                    }
+                }
+                if !unpinned.isEmpty {
+                    // Сортируем трекеры внутри каждой категории
+                    let sortedTrackers = unpinned.sorted { $0.name < $1.name }
+                    regularCategories.append(TrackerCategory(title: category.title, trackers: sortedTrackers))
+                }
+            }
+
+            // Сортируем все обычные категории по алфавиту
+            regularCategories.sort { $0.title < $1.title }
+
+            // Создаем категорию "Закрепленные", если есть закрепленные трекеры
+            if !pinnedTrackers.isEmpty {
+                let sortedPinnedTrackers = pinnedTrackers.sorted { $0.name < $1.name }
+                let pinnedCategory = TrackerCategory(title: "Закрепленные", trackers: sortedPinnedTrackers)
+                regularCategories.insert(pinnedCategory, at: 0) // Вставляем первой
+            }
+
             DispatchQueue.main.async {
-                self.trackerCategories = (trackerCategories, completedTrackers, completedCount)
-                self.collectionView.reloadData()  // Перезагружаем коллекцию с новыми данными
+                // Обновляем данные и перезагружаем коллекцию
+                self.trackerCategories = (regularCategories, completedTrackers, completedCount)
+                self.collectionView.reloadData()
                 self.updatePlaceholderVisibility()
                 self.activityIndicator.stopAnimating()
             }
@@ -254,6 +281,46 @@ final class TrackersViewController: UIViewController {
         let hasTrackers = !trackerCategories.0.isEmpty
         placeholderView.isHidden = hasTrackers
         collectionView.isHidden = !hasTrackers
+
+        if !hasTrackers {
+            placeholderLabel.text = "Ничего не найдено"
+            placeholderImageView.image = UIImage(resource: .search)
+        } else {
+            placeholderLabel.text = "Что будем отслеживать?"
+        }
+    }
+    
+    private func togglePin(for tracker: Tracker) {
+        trackerService?.togglePin(for: tracker.id) { [weak self] success in
+            guard success, let self = self else { return }
+            self.loadTrackers(for: self.datePicker.date)
+        }
+    }
+
+    private func deleteTracker(_ tracker: Tracker) {
+        trackerService?.deleteTracker(tracker.id) { [weak self] success in
+            guard success else { return }
+            self?.loadTrackers(for: self?.datePicker.date ?? Date())
+        }
+    }
+
+    private func showDeleteConfirmation(for tracker: Tracker) {
+        let alertController = UIAlertController(
+            title: nil,
+            message: "Уверены что хотите удалить трекер?",
+            preferredStyle: .actionSheet
+        )
+
+        let deleteAction = UIAlertAction(title: "Удалить", style: .destructive) { [weak self] _ in
+            self?.deleteTracker(tracker)
+        }
+
+        let cancelAction = UIAlertAction(title: "Отмена", style: .cancel, handler: nil)
+
+        alertController.addAction(deleteAction)
+        alertController.addAction(cancelAction)
+
+        present(alertController, animated: true, completion: nil)
     }
 
     // MARK: - Actions
@@ -295,25 +362,30 @@ extension TrackersViewController: UICollectionViewDataSource {
         }
 
         let tracker = trackerCategories.0[indexPath.section].trackers[indexPath.item]
-        
-        // Получаем количество выполнений для этого трекера
         let completedCount = trackerCategories.2[tracker.id] ?? 0
-        
-        // Проверяем, завершен ли трекер, используя словарь completedTrackers
         let isCompleted = trackerCategories.1[tracker.id] ?? false
-        
         let isFutureDate = datePicker.date > Date()
         
         print("Статус трекера \(tracker.name): \(isCompleted ? "выполнен" : "невыполнен")")
         
         cell.configure(with: tracker, isCompleted: isCompleted, completedCount: completedCount, isFutureDate: isFutureDate)
         
-        // Передаем логику для нажатия на кнопку
+        cell.didTogglePin = { [weak self] tracker in
+            self?.togglePin(for: tracker)
+        }
+
+        cell.didEditTracker = { tracker in
+            // Вызов редактирования трекера
+        }
+
+        cell.didDeleteTracker = { [weak self] tracker in
+            self?.showDeleteConfirmation(for: tracker)
+        }
+        
         cell.didTapActionButton = { [weak self] in
             guard let self = self else { return }
-            // Обновляем статус трекера
             self.trackerService?.completeTracker(tracker, on: self.datePicker.date)
-            self.loadTrackers(for: self.datePicker.date)  // Перезагружаем трекеры
+            self.loadTrackers(for: self.datePicker.date)
         }
         
         return cell
@@ -339,7 +411,6 @@ extension TrackersViewController: UICollectionViewDataSource {
 }
 
 // MARK: - UICollectionViewDelegateFlowLayout
-
 extension TrackersViewController: UICollectionViewDelegateFlowLayout {
     // Размер ячейки
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
@@ -373,7 +444,64 @@ extension TrackersViewController: UICollectionViewDelegateFlowLayout {
 }
 
 // MARK: - UISearchBarDelegate
-
 extension TrackersViewController: UISearchBarDelegate {
-    // добавить поиск
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchText.isEmpty {
+            loadTrackers(for: datePicker.date)  // Загружаем все трекеры, если поле пустое
+            searchBar.setShowsCancelButton(false, animated: true)  // Скрываем кнопку отмены
+        } else {
+            searchTrackers(by: searchText)  // Выполняем поиск
+            searchBar.setShowsCancelButton(true, animated: true)  // Показываем кнопку отмены
+        }
+    }
+
+    private func searchTrackers(by name: String) {
+        activityIndicator.startAnimating()
+        
+        DispatchQueue.global().async { [weak self] in
+            guard let self = self else { return }
+
+            let searchedCategories: [TrackerCategory] = self.trackerService?.searchTrackers(by: name) ?? []
+
+            DispatchQueue.main.async {
+                if searchedCategories.isEmpty {
+                    self.trackerCategories = ([], [:], [:])
+                } else {
+                    self.trackerCategories = (searchedCategories, [:], [:])
+                }
+                
+                self.collectionView.reloadData()
+                self.updatePlaceholderVisibility()
+                self.activityIndicator.stopAnimating()
+            }
+        }
+    }
+
+    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        searchBar.setShowsCancelButton(true, animated: true)  // Показываем кнопку отмены при фокусе
+    }
+
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.text = ""
+        searchBar.resignFirstResponder()
+        loadTrackers(for: datePicker.date)
+        searchBar.setShowsCancelButton(false, animated: true)
+    }
+    
+    private func setupDismissKeyboardGesture() {
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tapGesture.cancelsTouchesInView = false
+        view.addGestureRecognizer(tapGesture)
+    }
+
+    @objc private func dismissKeyboard() {
+        view.endEditing(true)
+    }
+}
+
+extension Array {
+    /// Безопасный доступ к элементу массива по индексу.
+    subscript(safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
+    }
 }
