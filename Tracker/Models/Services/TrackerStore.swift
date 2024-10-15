@@ -15,13 +15,14 @@ final class TrackerStore: NSObject, NSFetchedResultsControllerDelegate {
     }
 
     // Добавление нового трекера
-    func addTracker(name: String, color: UIColor, emoji: String, schedule: [String], category: TrackerCategory) -> Tracker? {
+    func addTracker(name: String, color: UIColor, emoji: String, schedule: [String], category: TrackerCategory, type: TrackerType) -> Tracker? {
         let trackerEntity = TrackerEntity(context: context)
         trackerEntity.id = UUID()
         trackerEntity.name = name
         trackerEntity.color = color
         trackerEntity.emoji = emoji
         trackerEntity.schedule = schedule as NSObject
+        trackerEntity.type = type.rawValue
 
         // Используем fetchCategoryEntity для привязки категории
         guard let categoryEntity = fetchCategoryEntity(for: category) else {
@@ -34,13 +35,14 @@ final class TrackerStore: NSObject, NSFetchedResultsControllerDelegate {
 
         do {
             try context.save()
-            return Tracker(id: trackerEntity.id!, name: name, color: color, emoji: emoji, schedule: schedule, isPinned: false)
+            return Tracker(id: trackerEntity.id!, name: name, color: color, emoji: emoji, schedule: schedule, isPinned: false, type: type)
         } catch {
             print("Ошибка при сохранении трекера: \(error)")
             return nil
         }
     }
     
+    // Удаление трекера
     func deleteTracker(with id: UUID, completion: @escaping (Bool) -> Void) {
         let fetchRequest: NSFetchRequest<TrackerEntity> = TrackerEntity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "id == %@", id as CVarArg)
@@ -60,6 +62,7 @@ final class TrackerStore: NSObject, NSFetchedResultsControllerDelegate {
         }
     }
     
+    // Закрепить трекер
     func togglePinStatus(for trackerID: UUID, completion: @escaping (Bool) -> Void) {
         let fetchRequest: NSFetchRequest<TrackerEntity> = TrackerEntity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "id == %@", trackerID as CVarArg)
@@ -100,6 +103,27 @@ final class TrackerStore: NSObject, NSFetchedResultsControllerDelegate {
             print("Ошибка при загрузке категории трекера: \(error)")
         }
         return nil
+    }
+
+    // Обновление трекера
+    func updateTracker(_ id: UUID, newName: String, newColor: UIColor, newEmoji: String, completion: @escaping (Bool) -> Void) {
+        let fetchRequest: NSFetchRequest<TrackerEntity> = TrackerEntity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+
+        do {
+            if let trackerEntity = try context.fetch(fetchRequest).first {
+                trackerEntity.name = newName
+                trackerEntity.color = newColor
+                trackerEntity.emoji = newEmoji
+                try context.save()
+                completion(true)
+            } else {
+                completion(false)
+            }
+        } catch {
+            print("Ошибка при обновлении трекера: \(error)")
+            completion(false)
+        }
     }
 
     private func setupFetchedResultsController() {
@@ -143,9 +167,11 @@ extension TrackerStore {
               let color = entity.color as? UIColor,
               let emoji = entity.emoji,
               let isPinned = entity.isPinned as? Bool,
-              let schedule = entity.schedule as? [String] else {
+              let schedule = entity.schedule as? [String],
+              let typeString = entity.type,
+              let type = TrackerType(rawValue: typeString) else {
             return nil
         }
-        return Tracker(id: id, name: name, color: color, emoji: emoji, schedule: schedule, isPinned: isPinned)
+        return Tracker(id: id, name: name, color: color, emoji: emoji, schedule: schedule, isPinned: isPinned, type: type)
     }
 }

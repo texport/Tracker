@@ -15,7 +15,6 @@ final class TrackerService: NSObject {
         self.recordStore = recordStore
         super.init()
         
-        // Подписываемся на изменения данных из TrackerStore
         trackerStore.onTrackersChanged = { [weak self] in
             self?.onTrackersUpdated?()
         }
@@ -30,7 +29,6 @@ final class TrackerService: NSObject {
         let dayOfWeek = getDayOfWeek(from: date)
         let trackers = trackerStore.fetchAllTrackers()
         
-        // Получаем все записи о выполнении на указанную дату
         let completedRecords = recordStore.fetchRecords(for: date)
         
         var categoryDict: [String: [Tracker]] = [:]
@@ -89,10 +87,7 @@ final class TrackerService: NSObject {
 
     func completeTracker(_ tracker: Tracker, on date: Date) {
         recordStore.addRecord(for: tracker, date: date)
-        
-        // Проверка, что запись сохранена
         let savedRecords = recordStore.fetchAllRecords().filter { $0.trackerID == tracker.id }
-        print("Записаны данные для трекера \(tracker.name): \(savedRecords)")
     }
 
     // Удаление трекера
@@ -126,22 +121,25 @@ final class TrackerService: NSObject {
         }
     }
     
+    // Обновление трекера
+    func updateTracker(_ tracker: Tracker, with name: String, color: UIColor, emoji: String, completion: @escaping (Bool) -> Void) {
+        trackerStore.updateTracker(tracker.id, newName: name, newColor: color, newEmoji: emoji) { success in
+            completion(success)
+        }
+    }
+
     // Поиск трекеров по имени
     func searchTrackers(by name: String) -> [TrackerCategory] {
-        // Получаем все трекеры из хранилища
         let allTrackers = trackerStore.fetchAllTrackers()
 
-        // Фильтруем трекеры по имени
         let filteredTrackers = allTrackers.filter {
             $0.name.lowercased().contains(name.lowercased())
         }
 
-        // Группируем трекеры по категориям, используя ID трекера
         let groupedTrackers = Dictionary(grouping: filteredTrackers) { tracker in
             trackerStore.fetchCategoryForTracker(trackerID: tracker.id)?.title ?? "Без категории"
         }
 
-        // Преобразуем в массив TrackerCategory
         return groupedTrackers.map { (categoryTitle, trackers) in
             TrackerCategory(title: categoryTitle, trackers: trackers)
         }

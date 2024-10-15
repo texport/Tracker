@@ -3,14 +3,24 @@ import UIKit
 final class CreateHabitView: UIView {
 
     var onEmojiSelected: ((String) -> Void)?
-    private var selectedEmoji: String?
-    private var selectedEmojiIndex: IndexPath?
+    var selectedEmoji: String?
+    var selectedEmojiIndex: IndexPath?
     
     var onColorSelected: ((UIColor) -> Void)?
-    private var selectedColorIndex: IndexPath?
+    var selectedColorIndex: IndexPath?
 
     // MARK: - UI Elements
 
+    private lazy var completedDaysLabel: UILabel = {
+        let label = UILabel()
+        label.font = UIFont.systemFont(ofSize: 32, weight: .bold)
+        label.textColor = .black
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.isHidden = true
+        return label
+    }()
+    
     private lazy var scrollView: UIScrollView = {
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -185,7 +195,7 @@ final class CreateHabitView: UIView {
         return label
     }()
 
-    private lazy var emojiCollectionView: UICollectionView = {
+    lazy var emojiCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.minimumInteritemSpacing = 5
         layout.minimumLineSpacing = 5
@@ -212,7 +222,7 @@ final class CreateHabitView: UIView {
     }()
         
     // UICollectionView для выбора цветов
-    private lazy var colorCollectionView: UICollectionView = {
+    lazy var colorCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.minimumInteritemSpacing = 5
         layout.minimumLineSpacing = 5
@@ -232,12 +242,17 @@ final class CreateHabitView: UIView {
     // Констрейнты для динамических отступов
     private var categoryTitleLabelTopConstraint: NSLayoutConstraint!
     private var scheduleTitleLabelTopConstraint: NSLayoutConstraint!
+    
+    // Два набора констрейнтов для управления версткой
+    private var withCounterConstraints: [NSLayoutConstraint] = []
+    private var withoutCounterConstraints: [NSLayoutConstraint] = []
 
     // MARK: - Initializer
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupLayout()
+        updateCompletedDaysLabel(with: nil)
     }
 
     required init?(coder: NSCoder) {
@@ -268,6 +283,8 @@ final class CreateHabitView: UIView {
             contentView.heightAnchor.constraint(greaterThanOrEqualTo: scrollView.heightAnchor) // Высота контента должна быть больше или равна высоте scrollView
         ])
         
+        // Счетчик выполнений
+        contentView.addSubview(completedDaysLabel)
         // Добавляем элементы для ввода названия трекера
         contentView.addSubview(trackerNameContainer)
         trackerNameContainer.addSubview(trackerNameTextView)
@@ -276,9 +293,8 @@ final class CreateHabitView: UIView {
         
         // Добавляем элемент ошибки
         contentView.addSubview(errorLabel)
-
-        // Настраиваем констрейнты для ввода названия трекера
-        NSLayoutConstraint.activate([
+        
+        withoutCounterConstraints = [
             trackerNameContainer.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 24),
             trackerNameContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             trackerNameContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
@@ -297,8 +313,35 @@ final class CreateHabitView: UIView {
 
             errorLabel.topAnchor.constraint(equalTo: trackerNameContainer.bottomAnchor, constant: 8),
             errorLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor)
-        ])
+        ]
 
+        NSLayoutConstraint.activate(withoutCounterConstraints)
+        
+        withCounterConstraints = [
+            completedDaysLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 24),
+            completedDaysLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            completedDaysLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            
+            trackerNameContainer.topAnchor.constraint(equalTo: completedDaysLabel.bottomAnchor, constant: 40),
+            trackerNameContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            trackerNameContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            trackerNameContainer.heightAnchor.constraint(equalToConstant: 75),
+
+            trackerNameTextView.leadingAnchor.constraint(equalTo: trackerNameContainer.leadingAnchor),
+            trackerNameTextView.trailingAnchor.constraint(equalTo: trackerNameContainer.trailingAnchor),
+            trackerNameTextView.topAnchor.constraint(equalTo: trackerNameContainer.topAnchor),
+            trackerNameTextView.bottomAnchor.constraint(equalTo: trackerNameContainer.bottomAnchor),
+
+            placeholderLabel.leadingAnchor.constraint(equalTo: trackerNameTextView.leadingAnchor, constant: 16),
+            placeholderLabel.centerYAnchor.constraint(equalTo: trackerNameTextView.centerYAnchor),
+
+            clearButton.trailingAnchor.constraint(equalTo: trackerNameContainer.trailingAnchor, constant: -8),
+            clearButton.centerYAnchor.constraint(equalTo: trackerNameContainer.centerYAnchor),
+
+            errorLabel.topAnchor.constraint(equalTo: trackerNameContainer.bottomAnchor, constant: 8),
+            errorLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor)
+        ]
+        
         // Добавляем контейнер для опций
         contentView.addSubview(optionsContainer)
 
@@ -434,6 +477,26 @@ final class CreateHabitView: UIView {
     }
     
     // MARK: - Methods
+    func updateCompletedDaysLabel(with count: Int?) {
+        guard completedDaysLabel.isHidden != (count == nil) else { return } // Избегаем лишних изменений
+
+        if let count = count {
+            completedDaysLabel.text = "\(count) дней"
+            completedDaysLabel.isHidden = false
+
+            NSLayoutConstraint.deactivate(withoutCounterConstraints)
+            NSLayoutConstraint.activate(withCounterConstraints)
+        } else {
+            completedDaysLabel.isHidden = true
+
+            NSLayoutConstraint.deactivate(withCounterConstraints)
+            NSLayoutConstraint.activate(withoutCounterConstraints)
+        }
+
+        UIView.animate(withDuration: 0.3) {
+            self.layoutIfNeeded()
+        }
+    }
 
     func updateSelectedDaysLabel(with text: String) {
         selectedDaysLabel.text = text
@@ -469,14 +532,14 @@ final class CreateHabitView: UIView {
 extension CreateHabitView: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
 
     // Набор эмодзи
-    private var emojis: [String] {
+    var emojis: [String] {
         ["🙂", "😻", "🌺", "🐶", "❤️", "😱",
          "😇", "😡", "🥶", "🤔", "🙌", "🍔",
          "🥦", "🏓", "🥇", "🎸", "🏝", "😪"]
     }
     
     // Набор цветов
-    private var colors: [UIColor] {
+    var colors: [UIColor] {
         [UIColor(resource: .red), UIColor(resource: .orange), UIColor(resource: .blue), UIColor(resource: .purple), UIColor(resource: .green), UIColor(resource: .pink),
          UIColor(resource: .pinkLight), UIColor(resource: .blueLight), UIColor(resource: .greenLight), UIColor(resource: .indigoDark), UIColor(resource: .orangeHight), UIColor(resource: .pinkMedium),
          UIColor(resource: .brownLight), UIColor(resource: .purpleVeryLight), UIColor(resource: .purpleHight), UIColor(resource: .purpleMedium), UIColor(resource: .purpleLight), UIColor(resource: .greenHight)]

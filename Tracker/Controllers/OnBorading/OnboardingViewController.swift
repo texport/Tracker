@@ -87,11 +87,16 @@ final class OnboardingViewController: UIPageViewController, UIPageViewController
     // MARK: - Skip Button Action
 
     @objc private func skipOnboarding() {
-        let mainVC = MainTabBarController()
-        let navigationController = UINavigationController(rootViewController: mainVC)
-        navigationController.modalPresentationStyle = .fullScreen
-        present(navigationController, animated: true, completion: nil)
+        guard let sceneDelegate = UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate,
+              let window = sceneDelegate.window else {
+            print("Ошибка: не удалось получить SceneDelegate или window")
+            return
+        }
 
+        let tabBarController = MainTabBarController()
+        window.rootViewController = tabBarController
+        window.makeKeyAndVisible()
+        
         // Сохраняем, что онбординг был завершен
         UserDefaults.standard.set(true, forKey: "onboardingCompleted")
     }

@@ -6,6 +6,8 @@ final class TrackersViewController: UIViewController {
     private var trackerCategories: ([TrackerCategory], [UUID: Bool], [UUID: Int]) = ([], [:], [:])
     private let activityIndicator = UIActivityIndicatorView(style: .large)
     private var trackerService: TrackerService?
+    private var currentFilter: TrackerFilter = .all
+    private let today = Calendar.current.startOfDay(for: Date())
     
     init() {
         super.init(nibName: nil, bundle: nil)
@@ -92,6 +94,17 @@ final class TrackersViewController: UIViewController {
         collectionView.backgroundColor = .clear
         return collectionView
     }()
+    
+    private lazy var filterButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Фильтры", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = .systemBlue // Добавляем фон для проверки
+        button.layer.cornerRadius = 16
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(openFilterScreen), for: .touchUpInside)
+        return button
+    }()
 
     // MARK: - View Lifecycle
 
@@ -121,6 +134,8 @@ final class TrackersViewController: UIViewController {
         view.addSubview(placeholderView)
         placeholderView.addSubview(placeholderImageView)
         placeholderView.addSubview(placeholderLabel)
+        
+        view.addSubview(filterButton)
     }
 
     private func setupConstraints() {
@@ -159,7 +174,13 @@ final class TrackersViewController: UIViewController {
 
             // Placeholder Label
             placeholderLabel.topAnchor.constraint(equalTo: placeholderImageView.bottomAnchor, constant: 8),
-            placeholderLabel.centerXAnchor.constraint(equalTo: placeholderView.centerXAnchor)
+            placeholderLabel.centerXAnchor.constraint(equalTo: placeholderView.centerXAnchor),
+            
+            // Filters Button
+            filterButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            filterButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            filterButton.heightAnchor.constraint(equalToConstant: 50),
+            filterButton.widthAnchor.constraint(equalToConstant: 114)
         ])
     }
 
@@ -224,52 +245,49 @@ final class TrackersViewController: UIViewController {
     }
 
     // MARK: - Загрузка данных
-    private func loadTrackers(for date: Date) {
+    private func loadTrackers(for date: Date, filter: TrackerFilter = .all) {
         activityIndicator.startAnimating()
+
         DispatchQueue.global().async { [weak self] in
             guard let self = self else { return }
 
-            // Загружаем трекеры и категории
-            guard let (trackerCategories, completedTrackers, completedCount) = self.trackerService?.fetchTrackers(for: date) else {
-                DispatchQueue.main.async {
-                    self.activityIndicator.stopAnimating()
-                }
-                return
-            }
+            // Получение всех трекеров и их статусов на текущую дату
+            let (categories, completedTrackers, _) = self.trackerService?.fetchTrackers(for: date) ?? ([], [:], [:])
 
             var pinnedTrackers: [Tracker] = []
-            var regularCategories: [TrackerCategory] = []
+            var unpinnedCategories: [TrackerCategory] = []
 
-            // Разделение трекеров на закрепленные и обычные
-            for category in trackerCategories {
+            // Разделение на закрепленные и незакрепленные трекеры
+            for category in categories {
                 var unpinned = [Tracker]()
                 for tracker in category.trackers {
                     if tracker.isPinned {
-                        pinnedTrackers.append(tracker) // Собираем все закрепленные
+                        pinnedTrackers.append(tracker)
                     } else {
-                        unpinned.append(tracker) // Оставляем обычные
+                        unpinned.append(tracker)
                     }
                 }
                 if !unpinned.isEmpty {
-                    // Сортируем трекеры внутри каждой категории
                     let sortedTrackers = unpinned.sorted { $0.name < $1.name }
-                    regularCategories.append(TrackerCategory(title: category.title, trackers: sortedTrackers))
+                    unpinnedCategories.append(TrackerCategory(title: category.title, trackers: sortedTrackers))
                 }
             }
 
-            // Сортируем все обычные категории по алфавиту
-            regularCategories.sort { $0.title < $1.title }
+            // Сортируем категории по алфавиту
+            unpinnedCategories.sort { $0.title < $1.title }
 
             // Создаем категорию "Закрепленные", если есть закрепленные трекеры
             if !pinnedTrackers.isEmpty {
                 let sortedPinnedTrackers = pinnedTrackers.sorted { $0.name < $1.name }
                 let pinnedCategory = TrackerCategory(title: "Закрепленные", trackers: sortedPinnedTrackers)
-                regularCategories.insert(pinnedCategory, at: 0) // Вставляем первой
+                unpinnedCategories.insert(pinnedCategory, at: 0)
             }
 
+            // Применяем фильтр
+            let filteredCategories = self.applyFilter(unpinnedCategories, filter: filter, completedTrackers: completedTrackers)
+
             DispatchQueue.main.async {
-                // Обновляем данные и перезагружаем коллекцию
-                self.trackerCategories = (regularCategories, completedTrackers, completedCount)
+                self.trackerCategories = (filteredCategories, completedTrackers, [:])
                 self.collectionView.reloadData()
                 self.updatePlaceholderVisibility()
                 self.activityIndicator.stopAnimating()
@@ -277,19 +295,31 @@ final class TrackersViewController: UIViewController {
         }
     }
 
-    private func updatePlaceholderVisibility() {
-        let hasTrackers = !trackerCategories.0.isEmpty
-        placeholderView.isHidden = hasTrackers
-        collectionView.isHidden = !hasTrackers
 
-        if !hasTrackers {
-            placeholderLabel.text = "Ничего не найдено"
-            placeholderImageView.image = UIImage(resource: .search)
-        } else {
-            placeholderLabel.text = "Что будем отслеживать?"
+    private var isSearchActive: Bool {
+        return !(searchBar.text?.isEmpty ?? true)
+    }
+
+    private func updatePlaceholderVisibility() {
+        let allTrackersForDate = trackerService?.fetchTrackers(for: datePicker.date).0 ?? []
+        let hasAnyTrackersOnDate = !allTrackersForDate.isEmpty
+        let hasVisibleTrackers = !trackerCategories.0.filter { !$0.trackers.isEmpty }.isEmpty
+
+        placeholderView.isHidden = hasVisibleTrackers
+        collectionView.isHidden = !hasVisibleTrackers
+        filterButton.isHidden = !hasAnyTrackersOnDate
+
+        if !hasVisibleTrackers {
+            if isSearchActive || currentFilter != .all {
+                placeholderLabel.text = "Ничего не найдено"
+                placeholderImageView.image = UIImage(named: "search")
+            } else {
+                placeholderLabel.text = "Что будем отслеживать?"
+                placeholderImageView.image = UIImage(named: "star")
+            }
         }
     }
-    
+
     private func togglePin(for tracker: Tracker) {
         trackerService?.togglePin(for: tracker.id) { [weak self] success in
             guard success, let self = self else { return }
@@ -330,7 +360,6 @@ final class TrackersViewController: UIViewController {
         createTrackerVC.modalPresentationStyle = .pageSheet
         createTrackerVC.modalTransitionStyle = .coverVertical
 
-        // Обновляем список трекеров после добавления нового
         createTrackerVC.onTrackerAdded = { [weak self] in
             self?.loadTrackers(for: self?.datePicker.date ?? Date())
         }
@@ -339,9 +368,78 @@ final class TrackersViewController: UIViewController {
         navigationController.modalPresentationStyle = .pageSheet
         present(navigationController, animated: true, completion: nil)
     }
-
+    
     @objc private func datePickerValueChanged(_ sender: UIDatePicker) {
-        loadTrackers(for: sender.date)
+        let selectedDate = Calendar.current.startOfDay(for: sender.date)
+
+        if selectedDate == today {
+            currentFilter = .today
+        } else {
+            currentFilter = .all
+        }
+
+        updateFilterButtonAppearance()
+        loadTrackers(for: selectedDate, filter: currentFilter)
+    }
+
+    
+    @objc private func openFilterScreen() {
+        let viewModel = FilterViewModel(selectedFilter: currentFilter)
+        viewModel.onFilterSelected = { [weak self] filter in
+            self?.applyFilterAndReload(filter)
+        }
+
+        let filterVC = FilterViewController(viewModel: viewModel)
+        let navigationController = UINavigationController(rootViewController: filterVC)
+        navigationController.modalPresentationStyle = .pageSheet
+        present(navigationController, animated: true, completion: nil)
+    }
+
+    private func applyFilterAndReload(_ filter: TrackerFilter) {
+        print("Применяем фильтр: \(filter)")
+
+        currentFilter = filter
+
+        if filter == .today {
+            let todayDate = Calendar.current.startOfDay(for: Date())
+            datePicker.setDate(todayDate, animated: true)
+        }
+
+        updateFilterButtonAppearance()
+        loadTrackers(for: datePicker.date, filter: currentFilter)
+    }
+    
+    private func updateFilterButtonAppearance() {
+        filterButton.setTitleColor(
+            currentFilter == .all ? .white : .red,
+            for: .normal
+        )
+    }
+    
+    private func applyFilter(
+        _ categories: [TrackerCategory],
+        filter: TrackerFilter,
+        completedTrackers: [UUID: Bool]
+    ) -> [TrackerCategory] {
+        switch filter {
+        case .all:
+            return categories
+
+        case .today:
+            return categories.filter { $0.trackers.contains { !$0.isPinned } }
+
+        case .completed:
+            return categories.map { category in
+                let completedTrackers = category.trackers.filter { completedTrackers[$0.id] == true }
+                return TrackerCategory(title: category.title, trackers: completedTrackers)
+            }.filter { !$0.trackers.isEmpty }
+
+        case .uncompleted:
+            return categories.map { category in
+                let uncompletedTrackers = category.trackers.filter { completedTrackers[$0.id] == false }
+                return TrackerCategory(title: category.title, trackers: uncompletedTrackers)
+            }.filter { !$0.trackers.isEmpty }
+        }
     }
 }
 
@@ -374,8 +472,25 @@ extension TrackersViewController: UICollectionViewDataSource {
             self?.togglePin(for: tracker)
         }
 
-        cell.didEditTracker = { tracker in
-            // Вызов редактирования трекера
+        cell.didEditTracker = { [weak self] tracker in
+            guard let self = self else { return }
+
+            // Ищем категорию, к которой принадлежит этот трекер
+            let categoryTitle = self.trackerCategories.0[indexPath.section].title
+
+            switch tracker.type {
+            case .habit:
+                let createHabitVC = CreateHabitViewController(tracker: tracker, category: categoryTitle)
+                let navigationController = UINavigationController(rootViewController: createHabitVC)
+                navigationController.modalPresentationStyle = .pageSheet
+                present(navigationController, animated: true, completion: nil)
+            case .event:
+                let createEventVC = CreateEventViewController(tracker: tracker, category: categoryTitle)
+                let navigationController = UINavigationController(rootViewController: createEventVC)
+                navigationController.modalPresentationStyle = .pageSheet
+                present(navigationController, animated: true, completion: nil)
+            }
+            
         }
 
         cell.didDeleteTracker = { [weak self] tracker in
