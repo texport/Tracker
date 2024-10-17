@@ -28,18 +28,24 @@ final class TrackersViewController: UIViewController {
     
     // MARK: - UI Elements
 
-    private lazy var datePicker: UIDatePicker = {
+    lazy var datePicker: UIDatePicker = {
         let picker = UIDatePicker()
         picker.datePickerMode = .date
         picker.preferredDatePickerStyle = .compact
         picker.locale = Locale(identifier: "ru_RU")
         picker.translatesAutoresizingMaskIntoConstraints = false
+
+        picker.layer.borderWidth = 0
+        picker.layer.shadowOpacity = 0
+        picker.clipsToBounds = true
+        
         return picker
     }()
 
     private lazy var topContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .mainBackground
         return view
     }()
 
@@ -47,6 +53,7 @@ final class TrackersViewController: UIViewController {
         let label = UILabel()
         label.text = "Трекеры"
         label.font = UIFont.systemFont(ofSize: 34, weight: .bold)
+        label.textColor = .mainText
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -57,12 +64,25 @@ final class TrackersViewController: UIViewController {
         searchBar.translatesAutoresizingMaskIntoConstraints = false
         searchBar.backgroundImage = UIImage()
         searchBar.searchTextField.layer.masksToBounds = true
+        
+        if let searchIconView = searchBar.searchTextField.leftView as? UIImageView {
+            searchIconView.tintColor = .searchAdd
+        }
+        
+        searchBar.searchTextField.attributedPlaceholder = NSAttributedString(
+            string: "Поиск",
+            attributes: [
+                .foregroundColor: UIColor(resource: .searchAdd)
+            ]
+        )
+        
         return searchBar
     }()
 
     private lazy var placeholderView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .mainBackground
         return view
     }()
 
@@ -78,6 +98,7 @@ final class TrackersViewController: UIViewController {
         let label = UILabel()
         label.text = "Что будем отслеживать?"
         label.font = UIFont.systemFont(ofSize: 12, weight: .regular)
+        label.textColor = .mainText
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -91,7 +112,8 @@ final class TrackersViewController: UIViewController {
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
-        collectionView.backgroundColor = .clear
+        collectionView.backgroundColor = .mainBackground
+        collectionView.isOpaque = false
         return collectionView
     }()
     
@@ -99,7 +121,7 @@ final class TrackersViewController: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle("Фильтры", for: .normal)
         button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = .systemBlue // Добавляем фон для проверки
+        button.backgroundColor = .systemBlue
         button.layer.cornerRadius = 16
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(openFilterScreen), for: .touchUpInside)
@@ -110,6 +132,7 @@ final class TrackersViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        view.accessibilityIdentifier = "TrackersViewController"
         setupNavigationBar()
         setupActions()
         setupViews()
@@ -118,6 +141,15 @@ final class TrackersViewController: UIViewController {
         setupActivityIndicator()
         setupDismissKeyboardGesture()
         loadTrackers(for: Date())
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        setNeedsStatusBarAppearanceUpdate() // Обновляет внешний вид статус-бара
+    }
+
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return traitCollection.userInterfaceStyle == .dark ? .lightContent : .darkContent
     }
 
     // MARK: - Setup Methods
@@ -294,7 +326,6 @@ final class TrackersViewController: UIViewController {
             }
         }
     }
-
 
     private var isSearchActive: Bool {
         return !(searchBar.text?.isEmpty ?? true)

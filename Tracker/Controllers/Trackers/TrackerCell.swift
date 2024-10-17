@@ -32,6 +32,7 @@ final class TrackerCell: UICollectionViewCell {
         view.layer.cornerRadius = 16
         view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
+        view.isOpaque = true
         return view
     }()
     
@@ -77,7 +78,7 @@ final class TrackerCell: UICollectionViewCell {
     private lazy var counterLabel: UILabel = {
         let label = UILabel()
         label.font = UIFont.systemFont(ofSize: 12)
-        label.textColor = .black
+        label.textColor = .mainText
         label.text = "0 дней"
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -180,18 +181,27 @@ final class TrackerCell: UICollectionViewCell {
         if isFutureDate {
             // Если выбранная дата в будущем, трекер нельзя выполнить
             actionButton.setImage(UIImage(systemName: "plus"), for: .normal)
+            actionButton.tintColor = UIColor { traitCollection in
+                return traitCollection.userInterfaceStyle == .dark ? .black : .white
+            }
             actionButton.isUserInteractionEnabled = false
             actionButton.alpha = 0.5
             actionButton.backgroundColor = tracker.color.withAlphaComponent(0.5)
         } else if isCompleted {
             // Если трекер уже выполнен в выбранный день, кнопка становится недоступной
             actionButton.setImage(UIImage(systemName: "checkmark"), for: .normal)
+            actionButton.tintColor = UIColor { traitCollection in
+                return traitCollection.userInterfaceStyle == .dark ? .black : .white
+            }
             actionButton.isUserInteractionEnabled = false
             actionButton.alpha = 0.5
             actionButton.backgroundColor = tracker.color.withAlphaComponent(0.5)
         } else {
             // Если трекер не выполнен, кнопка активна
             actionButton.setImage(UIImage(systemName: "plus"), for: .normal)
+            actionButton.tintColor = UIColor { traitCollection in
+                return traitCollection.userInterfaceStyle == .dark ? .black : .white
+            }
             actionButton.isUserInteractionEnabled = true
             actionButton.alpha = 1.0
             actionButton.backgroundColor = tracker.color
