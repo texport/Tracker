@@ -8,4 +8,8 @@
 
 "tab_trackers" = "Трекеры";
 "tab_statistics" = "Статистика";
+
+"label_trackers" = "Трекеры";
+"label_statistics" = "Статистика";
+
 "button_filters" = "Фильтры";
