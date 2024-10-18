@@ -2,14 +2,18 @@ import UIKit
 
 final class CreateHabitViewController: UIViewController, UITextViewDelegate, ScheduleViewControllerDelegate {
 
-    init() {
+    init(tracker: Tracker? = nil, category: String? = nil) {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
             fatalError("Не удалось получить AppDelegate")
         }
-        
+
         self.trackerStore = TrackerStore(context: appDelegate.persistentContainer.viewContext)
         self.categoryStore = TrackerCategoryStore(context: appDelegate.persistentContainer.viewContext)
-        
+        self.recordStore = TrackerRecordStore(context: appDelegate.persistentContainer.viewContext)
+        self.trackerService = TrackerService(trackerStore: trackerStore, categoryStore: categoryStore, recordStore: recordStore)
+        self.tracker = tracker
+        self.selectedCategory = category  // Сохраняем выбранную категорию
+
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -17,6 +21,7 @@ final class CreateHabitViewController: UIViewController, UITextViewDelegate, Sch
         fatalError("init(coder:) has not been implemented")
     }
     
+    var tracker: Tracker?
     var onTrackerAdded: (() -> Void)?
     
     private var selectedDays: [DayOfWeek] = []
@@ -24,6 +29,8 @@ final class CreateHabitViewController: UIViewController, UITextViewDelegate, Sch
     
     private let trackerStore: TrackerStore
     private let categoryStore: TrackerCategoryStore
+    private let recordStore: TrackerRecordStore
+    private let trackerService: TrackerService
     
     private let maxNameLength = 38
     private var optionsTopConstraint: NSLayoutConstraint?
@@ -48,13 +55,17 @@ final class CreateHabitViewController: UIViewController, UITextViewDelegate, Sch
         setupColorSelection()
         createHabitView.updateSelectedDaysLabel(with: "")
         updateCreateButtonState()
+        
+        if isEditingTracker {
+            setupForEditing()
+        }
     }
 
     // MARK: - Setup
 
     func setupNavigationBar() {
         navigationItem.hidesBackButton = true
-        navigationItem.title = "Новая привычка"
+        navigationItem.title = isEditingTracker ? "Редактирование привычки" : "Новая привычка"
         
         guard let navigationBar = navigationController?.navigationBar else {
             print("NavigationController отсутствует")
@@ -123,7 +134,6 @@ final class CreateHabitViewController: UIViewController, UITextViewDelegate, Sch
     }
 
     @objc private func createButtonTapped() {
-        print("Создание трекера")
         guard let trackerName = createHabitView.trackerNameTextView.text, !trackerName.isEmpty else {
             print("Название трекера не заполнено!")
             return
@@ -135,25 +145,45 @@ final class CreateHabitViewController: UIViewController, UITextViewDelegate, Sch
         }
 
         let selectedDaysStrings = selectedDays.map { $0.rawValue }
-        
+
         guard let category = categoryStore.addCategory(title: selectedCategory) else {
-            print("не получается создать категорию")
+            print("Не получается создать категорию")
             return
         }
 
-        guard let tracker = trackerStore.addTracker(name: trackerName, color: color, emoji: emoji, schedule: selectedDaysStrings, category: category) else {
-            print("не получилось создать привычку")
-            return
-        }
-        
-        onTrackerAdded?()
-
-        // Закрываем оба экрана
-        if let presentingVC = presentingViewController?.presentingViewController {
-            presentingVC.dismiss(animated: true, completion: nil) // Закрываем экран выбора типа привычки
+        // Проверяем, выполняем ли мы редактирование
+        if let tracker = tracker {
+            // Обновление существующего трекера
+            trackerStore.updateTracker(
+                tracker.id,
+                newName: trackerName,
+                newColor: color,
+                newEmoji: emoji
+            ) { [weak self] success in
+                if success {
+                    print("Трекер успешно обновлен")
+                    self?.onTrackerAdded?()
+                    self?.closeAllModals()
+                } else {
+                    print("Не удалось обновить трекер")
+                }
+            }
         } else {
-            // Если экран не был представлен модально, используем popToRootViewController
-            navigationController?.popToRootViewController(animated: true)
+            // Создание нового трекера
+            guard let newTracker = trackerStore.addTracker(
+                name: trackerName,
+                color: color,
+                emoji: emoji,
+                schedule: selectedDaysStrings,
+                category: category,
+                type: .habit
+            ) else {
+                print("Не удалось создать трекер")
+                return
+            }
+            print("Трекер создан: \(newTracker.name)")
+            onTrackerAdded?()
+            closeAllModals()
         }
     }
 
@@ -256,9 +286,71 @@ final class CreateHabitViewController: UIViewController, UITextViewDelegate, Sch
         print("Кнопка активна: \(createHabitView.createButton.isEnabled)")
         createHabitView.createButton.backgroundColor = createHabitView.createButton.isEnabled ? UIColor(named: "createButtonActive") : UIColor(named: "createButtonNone")
     }
+    
+    private var isEditingTracker: Bool {
+        return tracker != nil
+    }
+    
+    private func setupForEditing() {
+        guard let tracker else { return }
+
+        // Устанавливаем название и скрываем плейсхолдер
+        createHabitView.trackerNameTextView.text = tracker.name
+        createHabitView.placeholderLabel.isHidden = !tracker.name.isEmpty
+
+        // Обновляем выбранную категорию
+        if let savedCategory = selectedCategory {
+            createHabitView.updateSelectedCategoryLabel(with: savedCategory)
+        }
+
+        // Обновляем расписание
+        createHabitView.updateSelectedDaysLabel(with: tracker.schedule.joined(separator: ", "))
+        selectedDays = tracker.schedule.compactMap { DayOfWeek(rawValue: $0) }
+
+        // Устанавливаем выбранный эмодзи
+        emoji = tracker.emoji
+        if let emojiIndex = createHabitView.emojis.firstIndex(of: emoji) {
+            createHabitView.selectedEmojiIndex = IndexPath(item: emojiIndex, section: 0)
+            createHabitView.emojiCollectionView.reloadData()
+        }
+
+        // Сравнение и установка цвета
+        color = tracker.color
+        if let colorIndex = createHabitView.colors.firstIndex(where: { $0.isEqualToColor(tracker.color) }) {
+            createHabitView.selectedColorIndex = IndexPath(item: colorIndex, section: 0)
+            createHabitView.colorCollectionView.reloadData()
+        }
+
+        // Обновляем кнопку для редактирования
+        createHabitView.createButton.setTitle("Сохранить", for: .normal)
+
+        // Устанавливаем количество выполнений
+        let completionCount = trackerService.countCompleted(for: tracker)
+        createHabitView.updateCompletedDaysLabel(with: completionCount)
+    }
+    
+    private func closeAllModals() {
+        if let presentingVC = presentingViewController?.presentingViewController {
+            presentingVC.dismiss(animated: true, completion: nil)
+        } else {
+            dismiss(animated: true, completion: nil)
+        }
+    }
 }
 
 @available(iOS 17, *)
 #Preview {
     CreateHabitViewController()
+}
+
+extension UIColor {
+    func isEqualToColor(_ otherColor: UIColor) -> Bool {
+        var red1: CGFloat = 0, green1: CGFloat = 0, blue1: CGFloat = 0, alpha1: CGFloat = 0
+        var red2: CGFloat = 0, green2: CGFloat = 0, blue2: CGFloat = 0, alpha2: CGFloat = 0
+        
+        self.getRed(&red1, green: &green1, blue: &blue1, alpha: &alpha1)
+        otherColor.getRed(&red2, green: &green2, blue: &blue2, alpha: &alpha2)
+        
+        return red1 == red2 && green1 == green2 && blue1 == blue2 && alpha1 == alpha2
+    }
 }

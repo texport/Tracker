@@ -1,0 +1,88 @@
+# Операционная система
+######################
+.DS_Store
+*.swp
+*.swo
+*.swn
+Thumbs.db
+
+# Xcode
+######################
+xcuserdata/
+*.xcscmblueprint
+*.xcuserstate
+
+# Содержимое временной папки Xcode
+DerivedData/
+*.dSYM
+
+# Настройки симулятора и сборки
+build/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Carthage
+######################
+Carthage/Build/
+
+# Cocoapods
+######################
+Pods/
+*.lock
+*.xcworkspace
+
+# Swift Package Manager
+######################
+Packages/
+Package.resolved
+.swiftpm
+
+# Fastlane
+######################
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+fastlane/report.json
+
+# Bundler
+######################
+.bundle/
+
+# Сервисный файл для анализа кода (например, Sonar)
+######################
+sonar-project.properties
+
+# Другое
+######################
+*.mode1v3
+*.mode2v3
+*.pbxuser
+*.perspectivev3
+.idea/
+*.moved-aside
+*.hmap
+*.ipa
+*.app
+*.log
+*.crash
+*.xcresult
+
+# Playground поддержка
+######################
+timeline.xctimeline
+playground.xcworkspace
+
+# SwiftPM
+######################
+.build/
+
+# SwiftLint и SwiftFormat файлы для автоформатирования
+######################
+.swiftlint.yml
+.swiftformat
+
+# Файлы для интеграции аналитики и CI/CD, которые могут быть специфичными для машины
+######################
+*.env
+.secret/
+
