@@ -176,7 +176,12 @@ final class TrackerCell: UICollectionViewCell {
         trackerNameLabel.text = tracker.name
         actionButton.backgroundColor = tracker.color
 
-        counterLabel.text = "\(completedCount) дней"
+        // Получение правильной локализованной строки для множественных чисел
+        let localizedDays = String.localizedStringWithFormat(
+            NSLocalizedString("days_count", comment: ""), completedCount
+        )
+        
+        counterLabel.text = localizedDays
 
         if isFutureDate {
             // Если выбранная дата в будущем, трекер нельзя выполнить

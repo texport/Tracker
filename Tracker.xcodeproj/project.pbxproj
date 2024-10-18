@@ -42,6 +42,8 @@
 		1CD22F5F2CC16FA900C3666E /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD22F5E2CC16F9300C3666E /* AnalyticsManager.swift */; };
 		1CDEBC9B2CB95B09000B6B18 /* CategoryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CDEBC9A2CB95AF9000B6B18 /* CategoryViewController.swift */; };
 		1CDEBC9D2CB95B20000B6B18 /* CategoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CDEBC9C2CB95B1E000B6B18 /* CategoryViewModel.swift */; };
+		1CE265DF2CC2B3BA0088E496 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1CE265DD2CC2B3BA0088E496 /* Localizable.strings */; };
+		1CE265E52CC2B4750088E496 /* Localizable.stringsdict in Resources */ = {isa = PBXBuildFile; fileRef = 1CE265E32CC2B4750088E496 /* Localizable.stringsdict */; };
 		1CEA55E62C904AB1000580D7 /* CreateHabitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEA55E52C904AB1000580D7 /* CreateHabitView.swift */; };
 		1CEA55E82C904B12000580D7 /* CreateHabitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEA55E72C904B12000580D7 /* CreateHabitViewController.swift */; };
 		1CEA55EE2C91A616000580D7 /* ScheduleViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEA55ED2C91A616000580D7 /* ScheduleViewController.swift */; };
@@ -101,6 +103,10 @@
 		1CD22F5E2CC16F9300C3666E /* AnalyticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManager.swift; sourceTree = "<group>"; };
 		1CDEBC9A2CB95AF9000B6B18 /* CategoryViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryViewController.swift; sourceTree = "<group>"; };
 		1CDEBC9C2CB95B1E000B6B18 /* CategoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryViewModel.swift; sourceTree = "<group>"; };
+		1CE265DE2CC2B3BA0088E496 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		1CE265E22CC2B42E0088E496 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
+		1CE265E42CC2B4750088E496 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = en; path = en.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
+		1CE265E62CC2B4DC0088E496 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = ru; path = ru.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
 		1CEA55E52C904AB1000580D7 /* CreateHabitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateHabitView.swift; sourceTree = "<group>"; };
 		1CEA55E72C904B12000580D7 /* CreateHabitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateHabitViewController.swift; sourceTree = "<group>"; };
 		1CEA55ED2C91A616000580D7 /* ScheduleViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleViewController.swift; sourceTree = "<group>"; };
@@ -214,6 +220,8 @@
 		1C860E2E2C8F2FA100A0D3BC /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				1CE265DD2CC2B3BA0088E496 /* Localizable.strings */,
+				1CE265E32CC2B4750088E496 /* Localizable.stringsdict */,
 				1C567E7C2C8882730023A2BC /* Assets.xcassets */,
 				1C567E7E2C8882730023A2BC /* LaunchScreen.storyboard */,
 			);
@@ -410,6 +418,7 @@
 			knownRegions = (
 				en,
 				Base,
+				ru,
 			);
 			mainGroup = 1C567E672C88826F0023A2BC;
 			packageReferences = (
@@ -438,6 +447,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				1C567E802C8882730023A2BC /* LaunchScreen.storyboard in Resources */,
+				1CE265E52CC2B4750088E496 /* Localizable.stringsdict in Resources */,
+				1CE265DF2CC2B3BA0088E496 /* Localizable.strings in Resources */,
 				1C567E7D2C8882730023A2BC /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -542,6 +553,24 @@
 			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
 		};
+		1CE265DD2CC2B3BA0088E496 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				1CE265DE2CC2B3BA0088E496 /* en */,
+				1CE265E22CC2B42E0088E496 /* ru */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		1CE265E32CC2B4750088E496 /* Localizable.stringsdict */ = {
+			isa = PBXVariantGroup;
+			children = (
+				1CE265E42CC2B4750088E496 /* en */,
+				1CE265E62CC2B4DC0088E496 /* ru */,
+			);
+			name = Localizable.stringsdict;
+			sourceTree = "<group>";
+		};
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
@@ -588,6 +617,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -642,6 +672,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -651,6 +682,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -698,6 +730,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;

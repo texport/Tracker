@@ -32,11 +32,11 @@ final class MainTabBarController: UITabBarController {
 
         trackersNav.navigationBar.isTranslucent = false
 
-        trackersNav.tabBarItem = UITabBarItem(title: "Трекеры", image: trackersImage, tag: 0)
+        trackersNav.tabBarItem = UITabBarItem(title: NSLocalizedString("tab_trackers", comment: ""), image: trackersImage, tag: 0)
         
         let statisticsVC = StatisticViewController()
         statisticsVC.view.backgroundColor = .mainBackground
-        statisticsVC.tabBarItem = UITabBarItem(title: "Статистика", image: statisticsImage, tag: 1)
+        statisticsVC.tabBarItem = UITabBarItem(title: NSLocalizedString("tab_statistics", comment: ""), image: statisticsImage, tag: 1)
         
         viewControllers = [trackersNav, statisticsVC]
         tabBar.backgroundColor = .mainBackground
