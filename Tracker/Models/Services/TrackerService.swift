@@ -114,6 +114,10 @@ final class TrackerService: NSObject {
         return recordStore.fetchAllRecords().filter { $0.trackerID == tracker.id }.count
     }
     
+    func getAllCountCompleted() -> Int {
+        recordStore.fetchAllRecords().count
+    }
+    
     // Метод для закрепления/открепления трекера
     func togglePin(for trackerID: UUID, completion: @escaping (Bool) -> Void) {
         trackerStore.togglePinStatus(for: trackerID) { success in

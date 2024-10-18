@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import YandexMobileMetrica
 
 final class MainTabBarController: UITabBarController {
     
@@ -33,7 +34,7 @@ final class MainTabBarController: UITabBarController {
 
         trackersNav.tabBarItem = UITabBarItem(title: "Трекеры", image: trackersImage, tag: 0)
         
-        let statisticsVC = UIViewController()  // Это будет экран статистики
+        let statisticsVC = StatisticViewController()
         statisticsVC.view.backgroundColor = .mainBackground
         statisticsVC.tabBarItem = UITabBarItem(title: "Статистика", image: statisticsImage, tag: 1)
         
@@ -46,6 +47,14 @@ final class MainTabBarController: UITabBarController {
         addTabBarSeparator()
     }
     
+    override func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
+        if item.tag == 0 {
+            AnalyticsManager.shared.logScreenOpen(screen: "Main")
+        } else if item.tag == 1 {
+            AnalyticsManager.shared.logScreenOpen(screen: "Statistics")
+        }
+    }
+    
     private func addTabBarSeparator() {
         let separatorHeight: CGFloat = 0.5
         let separator = UIView(frame: CGRect(x: 0, y: 0, width: tabBar.frame.width, height: separatorHeight))
@@ -54,9 +63,4 @@ final class MainTabBarController: UITabBarController {
         
         tabBar.addSubview(separator)
     }
-}
-
-@available(iOS 17, *)
-#Preview {
-    MainTabBarController()
 }

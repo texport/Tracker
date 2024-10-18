@@ -146,8 +146,14 @@ final class TrackersViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         setNeedsStatusBarAppearanceUpdate() // Обновляет внешний вид статус-бара
+        AnalyticsManager.shared.logScreenOpen(screen: "Main")
     }
 
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        AnalyticsManager.shared.logScreenClose(screen: "Main")
+    }
+    
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return traitCollection.userInterfaceStyle == .dark ? .lightContent : .darkContent
     }
@@ -277,14 +283,64 @@ final class TrackersViewController: UIViewController {
     }
 
     // MARK: - Загрузка данных
+//    private func loadTrackers(for date: Date, filter: TrackerFilter = .all) {
+//        activityIndicator.startAnimating()
+//
+//        DispatchQueue.global().async { [weak self] in
+//            guard let self = self else { return }
+//
+//            // Получение всех трекеров и их статусов на текущую дату
+//            let (categories, completedTrackers, _) = self.trackerService?.fetchTrackers(for: date) ?? ([], [:], [:])
+//
+//            var pinnedTrackers: [Tracker] = []
+//            var unpinnedCategories: [TrackerCategory] = []
+//
+//            // Разделение на закрепленные и незакрепленные трекеры
+//            for category in categories {
+//                var unpinned = [Tracker]()
+//                for tracker in category.trackers {
+//                    if tracker.isPinned {
+//                        pinnedTrackers.append(tracker)
+//                    } else {
+//                        unpinned.append(tracker)
+//                    }
+//                }
+//                if !unpinned.isEmpty {
+//                    let sortedTrackers = unpinned.sorted { $0.name < $1.name }
+//                    unpinnedCategories.append(TrackerCategory(title: category.title, trackers: sortedTrackers))
+//                }
+//            }
+//
+//            // Сортируем категории по алфавиту
+//            unpinnedCategories.sort { $0.title < $1.title }
+//
+//            // Создаем категорию "Закрепленные", если есть закрепленные трекеры
+//            if !pinnedTrackers.isEmpty {
+//                let sortedPinnedTrackers = pinnedTrackers.sorted { $0.name < $1.name }
+//                let pinnedCategory = TrackerCategory(title: "Закрепленные", trackers: sortedPinnedTrackers)
+//                unpinnedCategories.insert(pinnedCategory, at: 0)
+//            }
+//
+//            // Применяем фильтр
+//            let filteredCategories = self.applyFilter(unpinnedCategories, filter: filter, completedTrackers: completedTrackers)
+//
+//            DispatchQueue.main.async {
+//                self.trackerCategories = (filteredCategories, completedTrackers, [:])
+//                self.collectionView.reloadData()
+//                self.updatePlaceholderVisibility()
+//                self.activityIndicator.stopAnimating()
+//            }
+//        }
+//    }
+
     private func loadTrackers(for date: Date, filter: TrackerFilter = .all) {
         activityIndicator.startAnimating()
 
         DispatchQueue.global().async { [weak self] in
             guard let self = self else { return }
 
-            // Получение всех трекеров и их статусов на текущую дату
-            let (categories, completedTrackers, _) = self.trackerService?.fetchTrackers(for: date) ?? ([], [:], [:])
+            // Получаем все трекеры, завершенные трекеры и количество завершений
+            let (categories, completedTrackers, completionCounts) = self.trackerService?.fetchTrackers(for: date) ?? ([], [:], [:])
 
             var pinnedTrackers: [Tracker] = []
             var unpinnedCategories: [TrackerCategory] = []
@@ -319,7 +375,7 @@ final class TrackersViewController: UIViewController {
             let filteredCategories = self.applyFilter(unpinnedCategories, filter: filter, completedTrackers: completedTrackers)
 
             DispatchQueue.main.async {
-                self.trackerCategories = (filteredCategories, completedTrackers, [:])
+                self.trackerCategories = (filteredCategories, completedTrackers, completionCounts)
                 self.collectionView.reloadData()
                 self.updatePlaceholderVisibility()
                 self.activityIndicator.stopAnimating()
@@ -393,6 +449,7 @@ final class TrackersViewController: UIViewController {
 
         createTrackerVC.onTrackerAdded = { [weak self] in
             self?.loadTrackers(for: self?.datePicker.date ?? Date())
+            AnalyticsManager.shared.logAddTrackClick(screen: "Main")
         }
 
         let navigationController = UINavigationController(rootViewController: createTrackerVC)
@@ -415,6 +472,7 @@ final class TrackersViewController: UIViewController {
 
     
     @objc private func openFilterScreen() {
+        AnalyticsManager.shared.logFilterClick(screen: "Main")
         let viewModel = FilterViewModel(selectedFilter: currentFilter)
         viewModel.onFilterSelected = { [weak self] filter in
             self?.applyFilterAndReload(filter)
@@ -506,6 +564,7 @@ extension TrackersViewController: UICollectionViewDataSource {
         cell.didEditTracker = { [weak self] tracker in
             guard let self = self else { return }
 
+            AnalyticsManager.shared.logEditClick(screen: "Main")
             // Ищем категорию, к которой принадлежит этот трекер
             let categoryTitle = self.trackerCategories.0[indexPath.section].title
 
@@ -525,12 +584,14 @@ extension TrackersViewController: UICollectionViewDataSource {
         }
 
         cell.didDeleteTracker = { [weak self] tracker in
+            AnalyticsManager.shared.logDeleteClick(screen: "Main")
             self?.showDeleteConfirmation(for: tracker)
         }
         
         cell.didTapActionButton = { [weak self] in
             guard let self = self else { return }
             self.trackerService?.completeTracker(tracker, on: self.datePicker.date)
+            AnalyticsManager.shared.logTrackCompletionClick(screen: "Main")
             self.loadTrackers(for: self.datePicker.date)
         }
         
