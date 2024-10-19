@@ -2,14 +2,18 @@ import UIKit
 
 final class CreateEventViewController: UIViewController, UITextViewDelegate {
 
-    init() {
+    init(tracker: Tracker? = nil, category: String? = nil) {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
             fatalError("Не удалось получить AppDelegate")
         }
         
         self.trackerStore = TrackerStore(context: appDelegate.persistentContainer.viewContext)
         self.categoryStore = TrackerCategoryStore(context: appDelegate.persistentContainer.viewContext)
-        
+        self.recordStore = TrackerRecordStore(context: appDelegate.persistentContainer.viewContext)
+        self.trackerService = TrackerService(trackerStore: trackerStore, categoryStore: categoryStore, recordStore: recordStore)
+        self.tracker = tracker
+        self.selectedCategory = category  // Сохраняем выбранную категорию
+
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -17,12 +21,15 @@ final class CreateEventViewController: UIViewController, UITextViewDelegate {
         fatalError("init(coder:) has not been implemented")
     }
     
+    var tracker: Tracker?
     var onTrackerAdded: (() -> Void)?
     
     let createEventView = CreateEventView()
     
     private let trackerStore: TrackerStore
     private let categoryStore: TrackerCategoryStore
+    private let recordStore: TrackerRecordStore
+    private let trackerService: TrackerService
     
     private let maxNameLength = 38
     private var optionsTopConstraint: NSLayoutConstraint?
@@ -46,13 +53,17 @@ final class CreateEventViewController: UIViewController, UITextViewDelegate {
         setupEmojiSelection()
         setupColorSelection()
         updateCreateButtonState()
+        
+        if isEditingTracker {
+            setupForEditing()
+        }
     }
 
     // MARK: - Setup
 
     func setupNavigationBar() {
         navigationItem.hidesBackButton = true
-        navigationItem.title = "Новое нерегулярное событие"
+        navigationItem.title = isEditingTracker ? "Редактирование нерегулярного события" : "Новое нерегулярное событие"
         
         guard let navigationBar = navigationController?.navigationBar else {
             print("NavigationController отсутствует")
@@ -118,7 +129,6 @@ final class CreateEventViewController: UIViewController, UITextViewDelegate {
     }
 
     @objc private func createButtonTapped() {
-        print("Создание трекера")
         guard let trackerName = createEventView.trackerNameTextView.text, !trackerName.isEmpty else {
             print("Название трекера не заполнено!")
             return
@@ -130,24 +140,46 @@ final class CreateEventViewController: UIViewController, UITextViewDelegate {
         }
 
         guard let category = categoryStore.addCategory(title: selectedCategory) else {
-            print("не получается создать категорию")
+            print("Не получается создать категорию")
             return
         }
 
-        guard let tracker = trackerStore.addTracker(name: trackerName, color: color, emoji: emoji, schedule: [], category: category) else {
-            print("не получилось создать привычку")
-            return
-        }
-        
-        onTrackerAdded?()
-
-        if let presentingVC = presentingViewController?.presentingViewController {
-            presentingVC.dismiss(animated: true, completion: nil)
+        // Проверяем, выполняем ли мы редактирование
+        if let tracker = tracker {
+            // Обновление существующего трекера
+            trackerStore.updateTracker(
+                tracker.id,
+                newName: trackerName,
+                newColor: color,
+                newEmoji: emoji
+            ) { [weak self] success in
+                if success {
+                    print("Трекер успешно обновлен")
+                    self?.onTrackerAdded?()
+                    self?.closeAllModals()
+                } else {
+                    print("Не удалось обновить трекер")
+                }
+            }
         } else {
-            navigationController?.popToRootViewController(animated: true)
+            // Создание нового трекера
+            guard let newTracker = trackerStore.addTracker(
+                name: trackerName,
+                color: color,
+                emoji: emoji,
+                schedule: [],
+                category: category,
+                type: .event
+            ) else {
+                print("Не удалось создать трекер")
+                return
+            }
+            print("Трекер создан: \(newTracker.name)")
+            onTrackerAdded?()
+            closeAllModals()
         }
     }
-
+    
     @objc private func dismissKeyboard() {
         view.endEditing(true)
     }
@@ -222,6 +254,46 @@ final class CreateEventViewController: UIViewController, UITextViewDelegate {
         createEventView.createButton.isEnabled = isNameEntered && isCategorySelected && isEmojiSelected && isColorSelected
         print("Кнопка активна: \(createEventView.createButton.isEnabled)")
         createEventView.createButton.backgroundColor = createEventView.createButton.isEnabled ? UIColor(named: "createButtonActive") : UIColor(named: "createButtonNone")
+    }
+    
+    private var isEditingTracker: Bool {
+        return tracker != nil
+    }
+    
+    private func setupForEditing() {
+        guard let tracker else { return }
+
+        createEventView.trackerNameTextView.text = tracker.name
+        createEventView.placeholderLabel.isHidden = !tracker.name.isEmpty
+
+        if let savedCategory = selectedCategory {
+            createEventView.updateSelectedCategoryLabel(with: savedCategory)
+        }
+
+        emoji = tracker.emoji
+        if let emojiIndex = createEventView.emojis.firstIndex(of: emoji) {
+            createEventView.selectedEmojiIndex = IndexPath(item: emojiIndex, section: 0)
+            createEventView.emojiCollectionView.reloadData()
+        }
+
+        color = tracker.color
+        if let colorIndex = createEventView.colors.firstIndex(where: { $0.isEqualToColor(tracker.color) }) {
+            createEventView.selectedColorIndex = IndexPath(item: colorIndex, section: 0)
+            createEventView.colorCollectionView.reloadData()
+        }
+
+        createEventView.createButton.setTitle("Сохранить", for: .normal)
+
+        let completionCount = trackerService.countCompleted(for: tracker)
+        createEventView.updateCompletedDaysLabel(with: completionCount)
+    }
+    
+    private func closeAllModals() {
+        if let presentingVC = presentingViewController?.presentingViewController {
+            presentingVC.dismiss(animated: true, completion: nil)
+        } else {
+            dismiss(animated: true, completion: nil)
+        }
     }
 }
 

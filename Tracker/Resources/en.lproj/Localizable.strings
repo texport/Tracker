@@ -1,0 +1,16 @@
+/* 
+  Localizable.strings
+  Tracker
+
+  Created by Sergey Ivanov on 18.10.2024.
+  
+*/
+
+"tab_trackers" = "Trackers";
+"tab_statistics" = "Statistics";
+
+"label_trackers" = "Trackers";
+"label_statistics" = "Statistics";
+
+"button_filters" = "Filters";
+

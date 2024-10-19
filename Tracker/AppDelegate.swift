@@ -7,6 +7,7 @@
 
 import CoreData
 import UIKit
+import YandexMobileMetrica
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -53,6 +54,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         // Инициализируем сервис
         trackerService = TrackerService(trackerStore: trackerStore, categoryStore: categoryStore, recordStore: recordStore)
+
+        // Инициализируем Яндекс Метрику
+        setupYandexMetrica()
         
         return true
     }
@@ -62,5 +66,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
+    }
+    
+    private func setupYandexMetrica(){
+        guard let configuration = YMMYandexMetricaConfiguration(apiKey: yandexApiKey) else {
+            print("Ошибка создания конфигурации Yandex AppMetrica")
+            return
+        }
+        YMMYandexMetrica.activate(with: configuration)
+        print("Yandex AppMetrica успешно активирована")
     }
 }

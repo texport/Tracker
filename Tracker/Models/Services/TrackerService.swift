@@ -15,7 +15,6 @@ final class TrackerService: NSObject {
         self.recordStore = recordStore
         super.init()
         
-        // Подписываемся на изменения данных из TrackerStore
         trackerStore.onTrackersChanged = { [weak self] in
             self?.onTrackersUpdated?()
         }
@@ -30,7 +29,6 @@ final class TrackerService: NSObject {
         let dayOfWeek = getDayOfWeek(from: date)
         let trackers = trackerStore.fetchAllTrackers()
         
-        // Получаем все записи о выполнении на указанную дату
         let completedRecords = recordStore.fetchRecords(for: date)
         
         var categoryDict: [String: [Tracker]] = [:]
@@ -89,17 +87,26 @@ final class TrackerService: NSObject {
 
     func completeTracker(_ tracker: Tracker, on date: Date) {
         recordStore.addRecord(for: tracker, date: date)
-        
-        // Проверка, что запись сохранена
         let savedRecords = recordStore.fetchAllRecords().filter { $0.trackerID == tracker.id }
-        print("Записаны данные для трекера \(tracker.name): \(savedRecords)")
     }
 
-    // Логика поиска по имени
-    func searchTrackers(with keyword: String) -> [Tracker] {
-        return trackerStore.fetchAllTrackers().filter { $0.name.lowercased().contains(keyword.lowercased()) }
+    // Удаление трекера
+    func deleteTracker(_ id: UUID, completion: @escaping (Bool) -> Void) {
+        trackerStore.deleteTracker(with: id) { success in
+            if success {
+                print("Трекер успешно удален")
+            } else {
+                print("Не удалось удалить трекер")
+            }
+            completion(success)
+        }
     }
     
+    // Удаление выполнения
+    func deleteRecord(for tracker: Tracker, on date: Date) {
+        recordStore.deleteRecord(for: tracker, date: date)
+    }
+
     // Вспомогательный метод для получения дня недели из даты
     private func getDayOfWeek(from date: Date) -> String {
         let dateFormatter = DateFormatter()
@@ -110,5 +117,40 @@ final class TrackerService: NSObject {
     
     func countCompleted(for tracker: Tracker) -> Int {
         return recordStore.fetchAllRecords().filter { $0.trackerID == tracker.id }.count
+    }
+    
+    func getAllCountCompleted() -> Int {
+        recordStore.fetchAllRecords().count
+    }
+    
+    // Метод для закрепления/открепления трекера
+    func togglePin(for trackerID: UUID, completion: @escaping (Bool) -> Void) {
+        trackerStore.togglePinStatus(for: trackerID) { success in
+            completion(success)
+        }
+    }
+    
+    // Обновление трекера
+    func updateTracker(_ tracker: Tracker, with name: String, color: UIColor, emoji: String, completion: @escaping (Bool) -> Void) {
+        trackerStore.updateTracker(tracker.id, newName: name, newColor: color, newEmoji: emoji) { success in
+            completion(success)
+        }
+    }
+
+    // Поиск трекеров по имени
+    func searchTrackers(by name: String) -> [TrackerCategory] {
+        let allTrackers = trackerStore.fetchAllTrackers()
+
+        let filteredTrackers = allTrackers.filter {
+            $0.name.lowercased().contains(name.lowercased())
+        }
+
+        let groupedTrackers = Dictionary(grouping: filteredTrackers) { tracker in
+            trackerStore.fetchCategoryForTracker(trackerID: tracker.id)?.title ?? "Без категории"
+        }
+
+        return groupedTrackers.map { (categoryTitle, trackers) in
+            TrackerCategory(title: categoryTitle, trackers: trackers)
+        }
     }
 }
