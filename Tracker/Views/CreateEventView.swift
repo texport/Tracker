@@ -255,27 +255,6 @@ final class CreateEventView: UIView {
         contentView.addSubview(errorLabel)
 
         // Настраиваем констрейнты для ввода названия трекера
-//        NSLayoutConstraint.activate([
-//            trackerNameContainer.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 24),
-//            trackerNameContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-//            trackerNameContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-//            trackerNameContainer.heightAnchor.constraint(equalToConstant: 75),
-//
-//            trackerNameTextView.leadingAnchor.constraint(equalTo: trackerNameContainer.leadingAnchor),
-//            trackerNameTextView.trailingAnchor.constraint(equalTo: trackerNameContainer.trailingAnchor),
-//            trackerNameTextView.topAnchor.constraint(equalTo: trackerNameContainer.topAnchor),
-//            trackerNameTextView.bottomAnchor.constraint(equalTo: trackerNameContainer.bottomAnchor),
-//
-//            placeholderLabel.leadingAnchor.constraint(equalTo: trackerNameTextView.leadingAnchor, constant: 16),
-//            placeholderLabel.centerYAnchor.constraint(equalTo: trackerNameTextView.centerYAnchor),
-//
-//            clearButton.trailingAnchor.constraint(equalTo: trackerNameContainer.trailingAnchor, constant: -8),
-//            clearButton.centerYAnchor.constraint(equalTo: trackerNameContainer.centerYAnchor),
-//
-//            errorLabel.topAnchor.constraint(equalTo: trackerNameContainer.bottomAnchor, constant: 8),
-//            errorLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor)
-//        ])
-
         withoutCounterConstraints = [
             trackerNameContainer.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 24),
             trackerNameContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
@@ -508,7 +487,6 @@ extension CreateEventView: UICollectionViewDataSource, UICollectionViewDelegateF
     }
     
     private func emojiButtonTapped(at indexPath: IndexPath) {
-        //guard let emoji = emojis[safe: indexPath.item] else { return }
         let emoji = emojis[indexPath.item]
 
         // Проверяем, что выбран новый эмоджи

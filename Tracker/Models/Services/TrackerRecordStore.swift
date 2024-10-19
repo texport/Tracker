@@ -28,6 +28,25 @@ final class TrackerRecordStore {
         return nil
     }
 
+    // Удаление записи о выполнении
+    func deleteRecord(for tracker: Tracker, date: Date) {
+        let fetchRequest: NSFetchRequest<TrackerRecordEntity> = TrackerRecordEntity.fetchRequest()
+        
+        // Фильтруем записи по ID трекера и дате
+        let startOfDay = Calendar.current.startOfDay(for: date)
+        fetchRequest.predicate = NSPredicate(format: "tracker.id == %@ AND date == %@", tracker.id as CVarArg, startOfDay as NSDate)
+        
+        do {
+            let records = try context.fetch(fetchRequest)
+            for record in records {
+                context.delete(record)
+            }
+            try context.save()
+        } catch {
+            print("Ошибка при удалении записи: \(error)")
+        }
+    }
+
     // Получение всех записей
     func fetchAllRecords() -> [TrackerRecord] {
         let fetchRequest: NSFetchRequest<TrackerRecordEntity> = TrackerRecordEntity.fetchRequest()

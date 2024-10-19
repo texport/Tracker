@@ -8,6 +8,7 @@ final class TrackersViewController: UIViewController {
     private var trackerService: TrackerService?
     private var currentFilter: TrackerFilter = .all
     private let today = Calendar.current.startOfDay(for: Date())
+    private var addButton: UIButton?
     
     init() {
         super.init(nibName: nil, bundle: nil)
@@ -158,6 +159,13 @@ final class TrackersViewController: UIViewController {
         return traitCollection.userInterfaceStyle == .dark ? .lightContent : .darkContent
     }
 
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
+            updateAddButtonIcon()
+        }
+    }
+
     // MARK: - Setup Methods
 
     private func setupViews() {
@@ -223,20 +231,22 @@ final class TrackersViewController: UIViewController {
     }
 
     private func setupNavigationBar() {
-        let addButton = UIButton(type: .system)
-        addButton.setImage(UIImage(named: "pluse")?.withRenderingMode(.alwaysOriginal), for: .normal)
-        addButton.addTarget(self, action: #selector(addTracker), for: .touchUpInside)
+        addButton = UIButton(type: .system)
+        addButton?.setImage(UIImage(named: "pluse")?.withRenderingMode(.alwaysOriginal), for: .normal)
+        addButton?.addTarget(self, action: #selector(addTracker), for: .touchUpInside)
 
         let addButtonContainer = UIView()
-        addButtonContainer.addSubview(addButton)
-        addButton.translatesAutoresizingMaskIntoConstraints = false
-
-        NSLayoutConstraint.activate([
-            addButton.leadingAnchor.constraint(equalTo: addButtonContainer.leadingAnchor),
-            addButton.trailingAnchor.constraint(equalTo: addButtonContainer.trailingAnchor),
-            addButton.topAnchor.constraint(equalTo: addButtonContainer.topAnchor),
-            addButton.bottomAnchor.constraint(equalTo: addButtonContainer.bottomAnchor)
-        ])
+        if let addButton = addButton {
+            addButtonContainer.addSubview(addButton)
+            addButton.translatesAutoresizingMaskIntoConstraints = false
+            
+            NSLayoutConstraint.activate([
+                addButton.leadingAnchor.constraint(equalTo: addButtonContainer.leadingAnchor),
+                addButton.trailingAnchor.constraint(equalTo: addButtonContainer.trailingAnchor),
+                addButton.topAnchor.constraint(equalTo: addButtonContainer.topAnchor),
+                addButton.bottomAnchor.constraint(equalTo: addButtonContainer.bottomAnchor)
+            ])
+        }
 
         guard let navigationBar = navigationController?.navigationBar else {
             print("Navigation bar не найден")
@@ -281,58 +291,13 @@ final class TrackersViewController: UIViewController {
             activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
     }
+    
+    private func updateAddButtonIcon() {
+        let addButtonImage = UIImage(named: "pluse")?.withRenderingMode(.alwaysOriginal)
+        addButton?.setImage(addButtonImage, for: .normal)
+    }
 
     // MARK: - Загрузка данных
-//    private func loadTrackers(for date: Date, filter: TrackerFilter = .all) {
-//        activityIndicator.startAnimating()
-//
-//        DispatchQueue.global().async { [weak self] in
-//            guard let self = self else { return }
-//
-//            // Получение всех трекеров и их статусов на текущую дату
-//            let (categories, completedTrackers, _) = self.trackerService?.fetchTrackers(for: date) ?? ([], [:], [:])
-//
-//            var pinnedTrackers: [Tracker] = []
-//            var unpinnedCategories: [TrackerCategory] = []
-//
-//            // Разделение на закрепленные и незакрепленные трекеры
-//            for category in categories {
-//                var unpinned = [Tracker]()
-//                for tracker in category.trackers {
-//                    if tracker.isPinned {
-//                        pinnedTrackers.append(tracker)
-//                    } else {
-//                        unpinned.append(tracker)
-//                    }
-//                }
-//                if !unpinned.isEmpty {
-//                    let sortedTrackers = unpinned.sorted { $0.name < $1.name }
-//                    unpinnedCategories.append(TrackerCategory(title: category.title, trackers: sortedTrackers))
-//                }
-//            }
-//
-//            // Сортируем категории по алфавиту
-//            unpinnedCategories.sort { $0.title < $1.title }
-//
-//            // Создаем категорию "Закрепленные", если есть закрепленные трекеры
-//            if !pinnedTrackers.isEmpty {
-//                let sortedPinnedTrackers = pinnedTrackers.sorted { $0.name < $1.name }
-//                let pinnedCategory = TrackerCategory(title: "Закрепленные", trackers: sortedPinnedTrackers)
-//                unpinnedCategories.insert(pinnedCategory, at: 0)
-//            }
-//
-//            // Применяем фильтр
-//            let filteredCategories = self.applyFilter(unpinnedCategories, filter: filter, completedTrackers: completedTrackers)
-//
-//            DispatchQueue.main.async {
-//                self.trackerCategories = (filteredCategories, completedTrackers, [:])
-//                self.collectionView.reloadData()
-//                self.updatePlaceholderVisibility()
-//                self.activityIndicator.stopAnimating()
-//            }
-//        }
-//    }
-
     private func loadTrackers(for date: Date, filter: TrackerFilter = .all) {
         activityIndicator.startAnimating()
 
@@ -592,6 +557,14 @@ extension TrackersViewController: UICollectionViewDataSource {
             guard let self = self else { return }
             self.trackerService?.completeTracker(tracker, on: self.datePicker.date)
             AnalyticsManager.shared.logTrackCompletionClick(screen: "Main")
+            self.loadTrackers(for: self.datePicker.date)
+        }
+        
+        cell.didTapDeleteActionButton = { [weak self] in
+            guard let self = self else { return }
+            let tracker = trackerCategories.0[indexPath.section].trackers[indexPath.item]
+            let date = self.datePicker.date
+            self.trackerService?.deleteRecord(for: tracker, on: date)
             self.loadTrackers(for: self.datePicker.date)
         }
         

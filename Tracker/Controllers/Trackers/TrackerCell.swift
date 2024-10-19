@@ -4,12 +4,13 @@ final class TrackerCell: UICollectionViewCell {
     static let identifier = "TrackerCell"
     
     var tracker: Tracker?
+    private var isCompleted: Bool = false
+    private var completedCount: Int = 0
     var didTogglePin: ((Tracker) -> Void)?
     var didEditTracker: ((Tracker) -> Void)?
     var didDeleteTracker: ((Tracker) -> Void)?
-    
     var didTapActionButton: (() -> Void)?
-    
+    var didTapDeleteActionButton: (() -> Void)?
     
     private func setupView() {
         // Добавляем обработчик нажатия
@@ -156,9 +157,27 @@ final class TrackerCell: UICollectionViewCell {
         ])
     }
     
-    // Обработчик нажатия на кнопку
     @objc private func handleActionButtonTap() {
-        didTapActionButton?()
+        guard let tracker = tracker else { return }
+
+        if isCompleted {
+            actionButton.setImage(UIImage(systemName: "plus"), for: .normal)
+            counterLabel.text = "\(completedCount - 1) дней"
+            completedCount -= 1
+            // Удаляем запись о выполнении
+            didTapDeleteActionButton?()
+        } else {
+            didTapActionButton?()
+            actionButton.setImage(UIImage(systemName: "checkmark"), for: .normal)
+            counterLabel.text = "\(completedCount + 1) дней"
+            completedCount += 1
+        }
+
+        isCompleted.toggle()
+
+        // Обновляем внешний вид кнопки
+        setNeedsLayout()
+        layoutIfNeeded()
     }
     
     private func setupContextMenuInteraction() {
@@ -170,6 +189,8 @@ final class TrackerCell: UICollectionViewCell {
     
     func configure(with tracker: Tracker, isCompleted: Bool, completedCount: Int, isFutureDate: Bool) {
         self.tracker = tracker
+        self.isCompleted = isCompleted
+        self.completedCount = completedCount
         backgroundCardView.backgroundColor = tracker.color
         emojiLabel.text = tracker.emoji
         pinIcon.isHidden = !tracker.isPinned
@@ -198,7 +219,7 @@ final class TrackerCell: UICollectionViewCell {
             actionButton.tintColor = UIColor { traitCollection in
                 return traitCollection.userInterfaceStyle == .dark ? .black : .white
             }
-            actionButton.isUserInteractionEnabled = false
+            actionButton.isUserInteractionEnabled = true
             actionButton.alpha = 0.5
             actionButton.backgroundColor = tracker.color.withAlphaComponent(0.5)
         } else {

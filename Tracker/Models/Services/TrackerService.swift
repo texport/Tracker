@@ -102,6 +102,11 @@ final class TrackerService: NSObject {
         }
     }
     
+    // Удаление выполнения
+    func deleteRecord(for tracker: Tracker, on date: Date) {
+        recordStore.deleteRecord(for: tracker, date: date)
+    }
+
     // Вспомогательный метод для получения дня недели из даты
     private func getDayOfWeek(from date: Date) -> String {
         let dateFormatter = DateFormatter()

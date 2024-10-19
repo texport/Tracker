@@ -263,33 +263,27 @@ final class CreateEventViewController: UIViewController, UITextViewDelegate {
     private func setupForEditing() {
         guard let tracker else { return }
 
-        // Устанавливаем название и скрываем плейсхолдер
         createEventView.trackerNameTextView.text = tracker.name
         createEventView.placeholderLabel.isHidden = !tracker.name.isEmpty
 
-        // Обновляем выбранную категорию
         if let savedCategory = selectedCategory {
             createEventView.updateSelectedCategoryLabel(with: savedCategory)
         }
 
-        // Устанавливаем выбранный эмодзи
         emoji = tracker.emoji
         if let emojiIndex = createEventView.emojis.firstIndex(of: emoji) {
             createEventView.selectedEmojiIndex = IndexPath(item: emojiIndex, section: 0)
             createEventView.emojiCollectionView.reloadData()
         }
 
-        // Сравнение и установка цвета
         color = tracker.color
         if let colorIndex = createEventView.colors.firstIndex(where: { $0.isEqualToColor(tracker.color) }) {
             createEventView.selectedColorIndex = IndexPath(item: colorIndex, section: 0)
             createEventView.colorCollectionView.reloadData()
         }
 
-        // Обновляем кнопку для редактирования
         createEventView.createButton.setTitle("Сохранить", for: .normal)
 
-        // Устанавливаем количество выполнений
         let completionCount = trackerService.countCompleted(for: tracker)
         createEventView.updateCompletedDaysLabel(with: completionCount)
     }
